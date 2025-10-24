@@ -8,47 +8,21 @@ import (
 	"github.com/aardzhanov/awesomeProject3/ciscoterm"
 )
 
-type CiscoJobs struct {
-	ciscoterm.CiscoDevice
-	Commands []string
-}
-
-type CiscoResult struct {
-	Host    string
-	Command string
-	Result  []string
-	Error   error
-}
-
-type CiscoWorker struct {
-	maxParallel int
-	jobs        chan CiscoJobs
-	results     chan CiscoResult
-}
-
-func NewCiscoWorker(maxParallel int) CiscoWorker {
-	return CiscoWorker{
-		maxParallel: maxParallel,
-		jobs:        make(chan CiscoJobs, maxParallel),
-		results:     make(chan CiscoResult, maxParallel),
-	}
-}
-
-func (cw *CiscoWorker) Start() {
+func (cw *ciscoWorker) Start() {
 	for i := 0; i < cw.maxParallel; i++ {
-		go cw.NetDevWorker()
+		go cw.netDevWorker()
 	}
 }
 
-func (cw *CiscoWorker) Execute(job CiscoJobs) {
+func (cw *ciscoWorker) Execute(job CiscoJobs) {
 	cw.jobs <- job
 }
 
-func (cw *CiscoWorker) Output() chan CiscoResult {
+func (cw *ciscoWorker) Output() chan CiscoResult {
 	return cw.results
 }
 
-func (cw *CiscoWorker) NetDevWorker() {
+func (cw *ciscoWorker) netDevWorker() {
 	for job := range cw.jobs {
 		ctxTimeout, cancel := context.WithTimeout(context.Background(), time.Duration(job.Timeout)*time.Second)
 		defer cancel()

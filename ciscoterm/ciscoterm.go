@@ -3,35 +3,13 @@ package ciscoterm
 import (
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh"
 )
 
-type CiscoDevice struct {
-	Hostname     string
-	Username     string
-	Password     string
-	Enable       string
-	KeyExchanges []string
-	Timeout      int
-}
-
-type Terminal struct {
-	stdinBuf  io.WriteCloser
-	stdoutBuf io.Reader
-	session   *ssh.Session
-	cmdPrompt string
-	isEnabled bool
-}
-
-func NewTerminal() *Terminal {
-	return &Terminal{}
-}
-
-func (t *Terminal) Connect(ciscoDev CiscoDevice) error {
+func (t *terminal) Connect(ciscoDev CiscoDevice) error {
 	modes := ssh.TerminalModes{
 		ssh.ECHO:          0,
 		ssh.TTY_OP_ISPEED: 14400,
@@ -104,14 +82,14 @@ func (t *Terminal) Connect(ciscoDev CiscoDevice) error {
 	return err
 }
 
-func (t *Terminal) Close() error {
+func (t *terminal) Close() error {
 	if t.session != nil {
 		return t.session.Close()
 	}
 	return errors.New("no session")
 }
 
-func (t *Terminal) EnableTerm(enablePasswd string) error {
+func (t *terminal) EnableTerm(enablePasswd string) error {
 	_, err := t.stdinBuf.Write([]byte("enable\n" + enablePasswd + "\n"))
 	if err != nil {
 		return fmt.Errorf("enable terminal error: %w", err)
@@ -128,7 +106,7 @@ func (t *Terminal) EnableTerm(enablePasswd string) error {
 	return err
 }
 
-func (t *Terminal) DisablePagination() error {
+func (t *terminal) DisablePagination() error {
 	_, err := t.stdinBuf.Write([]byte("terminal pager 0\n"))
 	if err != nil {
 		return fmt.Errorf("disable pagination error: %w", err)
@@ -143,7 +121,7 @@ func (t *Terminal) DisablePagination() error {
 	return err
 }
 
-func (t *Terminal) ExecuteCommand(cmd string) ([]string, error) {
+func (t *terminal) ExecuteCommand(cmd string) ([]string, error) {
 	_, err := t.stdinBuf.Write([]byte(cmd + "\n"))
 	if err != nil {
 		return nil, fmt.Errorf("execute command error: %w", err)
@@ -159,7 +137,7 @@ func (t *Terminal) ExecuteCommand(cmd string) ([]string, error) {
 	return output, err
 }
 
-func (t *Terminal) readCommandOutput() (bool, []string, error) {
+func (t *terminal) readCommandOutput() (bool, []string, error) {
 	time.Sleep(time.Millisecond * 100)
 	stdOutBytes := make([]byte, 100000)
 	var byteCount int
