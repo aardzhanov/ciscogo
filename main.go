@@ -15,8 +15,8 @@ func main() {
 			CiscoDevice: ciscoterm.CiscoDevice{
 				Hostname:     "172.31.142.14:22",
 				Username:     "user",
-				Password:     "passwd123invalid",
-				Enable:       "enablepasswd",
+				Password:     "T1Rules@123",
+				Enable:       "T1Rules@123",
 				KeyExchanges: []string{ssh.InsecureKeyExchangeDH1SHA1},
 				Timeout:      1,
 			},
@@ -26,8 +26,8 @@ func main() {
 			CiscoDevice: ciscoterm.CiscoDevice{
 				Hostname:     "172.31.142.14:22",
 				Username:     "user",
-				Password:     "passwd123",
-				Enable:       "enablepasswd",
+				Password:     "T1Rules@123",
+				Enable:       "T1Rules@123",
 				KeyExchanges: []string{ssh.InsecureKeyExchangeDH1SHA1},
 				Timeout:      1,
 			},
@@ -37,7 +37,7 @@ func main() {
 			CiscoDevice: ciscoterm.CiscoDevice{
 				Hostname:     "172.31.142.14:22",
 				Username:     "user",
-				Password:     "passwd123",
+				Password:     "T1Rules@123",
 				Enable:       "invalid",
 				KeyExchanges: []string{ssh.InsecureKeyExchangeDH1SHA1},
 				Timeout:      1,
@@ -48,8 +48,8 @@ func main() {
 			CiscoDevice: ciscoterm.CiscoDevice{
 				Hostname:     "172.31.142.14:22",
 				Username:     "user",
-				Password:     "passwd123",
-				Enable:       "enablepasswd",
+				Password:     "T1Rules@123",
+				Enable:       "T1Rules@123",
 				KeyExchanges: []string{ssh.InsecureKeyExchangeDH1SHA1},
 				Timeout:      1,
 			},
