@@ -1,7 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"os/signal"
+	"syscall"
 
 	"github.com/aardzhanov/awesomeProject3/ciscoterm"
 	"github.com/aardzhanov/awesomeProject3/ciscoworker"
@@ -10,12 +13,15 @@ import (
 
 func main() {
 
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
 	inJobs := []ciscoworker.CiscoJobs{
 		{
 			CiscoDevice: ciscoterm.CiscoDevice{
 				Hostname:     "172.31.142.14:22",
 				Username:     "user",
-				Password:     "passwd123invalid",
+				Password:     "passwd123",
 				Enable:       "enablepasswd",
 				KeyExchanges: []string{ssh.InsecureKeyExchangeDH1SHA1},
 				Timeout:      1,
@@ -57,24 +63,23 @@ func main() {
 		},
 	}
 
+	myFoo := func(result ciscoworker.CiscoResult) {
+		fmt.Println(">>> " + result.Host)
+		if result.Error != nil {
+			fmt.Println(">>> " + result.Error.Error())
+		}
+		fmt.Println(">>> " + result.Command)
+		for _, val := range result.Result {
+			fmt.Println(val)
+		}
+	}
+
 	worker := ciscoworker.NewCiscoWorker(3)
 	worker.Start()
+	worker.ResultCallback(ctx, myFoo)
 	for _, job := range inJobs {
 		worker.Execute(job)
 	}
 
-	for {
-		select {
-		case res := <-worker.Output():
-			fmt.Println(">>> " + res.Host)
-			if res.Error != nil {
-				fmt.Println(">>> " + res.Error.Error())
-			}
-			fmt.Println(">>> " + res.Command)
-			for _, val := range res.Result {
-				fmt.Println(val)
-			}
-
-		}
-	}
+	<-ctx.Done()
 }

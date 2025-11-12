@@ -18,8 +18,19 @@ func (cw *ciscoWorker) Execute(job CiscoJobs) {
 	cw.jobs <- job
 }
 
-func (cw *ciscoWorker) Output() chan CiscoResult {
-	return cw.results
+func (cw *ciscoWorker) ResultCallback(ctx context.Context,
+	fn func(result CiscoResult),
+) {
+	go func() {
+		for {
+			select {
+			case res := <-cw.results:
+				fn(res)
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 }
 
 func (cw *ciscoWorker) netDevWorker() {

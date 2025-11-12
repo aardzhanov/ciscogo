@@ -1,9 +1,11 @@
 package ciscoworker
 
+import "context"
+
 type CiscoWorker interface {
 	Start()
 	Execute(job CiscoJobs)
-	Output() chan CiscoResult
+	ResultCallback(ctx context.Context, fn func(result CiscoResult))
 }
 
 func NewCiscoWorker(maxParallel int) CiscoWorker {
