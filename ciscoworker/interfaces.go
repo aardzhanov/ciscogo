@@ -3,7 +3,7 @@ package ciscoworker
 import "context"
 
 type CiscoWorker interface {
-	Start()
+	Start(ctx context.Context)
 	Execute(job CiscoJobs)
 	ResultCallback(ctx context.Context, fn func(result CiscoResult))
 }

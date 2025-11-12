@@ -75,7 +75,7 @@ func main() {
 	}
 
 	worker := ciscoworker.NewCiscoWorker(3)
-	worker.Start()
+	worker.Start(ctx)
 	worker.ResultCallback(ctx, myFoo)
 	for _, job := range inJobs {
 		worker.Execute(job)
