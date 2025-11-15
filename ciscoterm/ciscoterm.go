@@ -24,6 +24,7 @@ func (t *terminal) Connect(ciscoDev CiscoDevice) error {
 		Auth: []ssh.AuthMethod{
 			ssh.Password(ciscoDev.Password),
 		},
+		Timeout:         time.Second * time.Duration(ciscoDev.Timeout),
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // For development, use ssh.FixedHostKey or ssh.KnownHosts for production
 	}
 
