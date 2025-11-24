@@ -6,8 +6,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/aardzhanov/awesomeProject3/ciscoterm"
-	"github.com/aardzhanov/awesomeProject3/ciscoworker"
+	"github.com/aardzhanov/ciscogo/ciscoterm"
+	"github.com/aardzhanov/ciscogo/ciscoworker"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -63,23 +63,27 @@ func main() {
 		},
 	}
 
-	myFoo := func(result ciscoworker.CiscoResult) {
+	myFoo := func(ctx context.Context, result ciscoworker.CiscoResult) {
 		fmt.Println(">>> " + result.Host)
 		if result.Error != nil {
 			fmt.Println(">>> " + result.Error.Error())
 		}
-		fmt.Println(">>> " + result.Command)
-		for _, val := range result.Result {
-			fmt.Println(val)
+
+		for k, v := range result.Result {
+			fmt.Println(">>> " + k)
+			if v.Error != nil {
+				fmt.Println(v.Error.Error())
+			}
+			for _, val := range v.Result {
+				fmt.Println(val)
+			}
 		}
 	}
 
 	worker := ciscoworker.NewCiscoWorker(3)
-	worker.Start(ctx)
-	worker.ResultCallback(ctx, myFoo)
+	worker.StartWithCallback(ctx, myFoo)
 	for _, job := range inJobs {
 		worker.Execute(job)
 	}
-
 	<-ctx.Done()
 }

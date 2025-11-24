@@ -7,15 +7,16 @@ type CiscoJobs struct {
 	Commands []string
 }
 
-type CiscoResult struct {
-	Host    string
-	Command string
-	Result  []string
-	Error   error
+type commandResult struct {
+	Result []string
+	Error  error
 }
-
+type CiscoResult struct {
+	Host   string
+	Result map[string]commandResult
+	Error  error
+}
 type ciscoWorker struct {
 	maxParallel int
 	jobs        chan CiscoJobs
-	results     chan CiscoResult
 }

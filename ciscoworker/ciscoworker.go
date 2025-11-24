@@ -8,9 +8,9 @@ import (
 	"github.com/aardzhanov/awesomeProject3/ciscoterm"
 )
 
-func (cw *ciscoWorker) Start(ctx context.Context) {
-	for i := 0; i < cw.maxParallel; i++ {
-		go cw.netDevWorker(ctx)
+func (wrk *ciscoWorker) StartWithCallback(ctx context.Context, fn func(ctx context.Context, result CiscoResult)) {
+	for i := 0; i < wrk.maxParallel; i++ {
+		go wrk.netDevWorker(ctx, fn)
 	}
 }
 
@@ -18,86 +18,59 @@ func (cw *ciscoWorker) Execute(job CiscoJobs) {
 	cw.jobs <- job
 }
 
-func (cw *ciscoWorker) ResultCallback(ctx context.Context,
-	fn func(result CiscoResult),
-) {
-	go func() {
-		for {
-			select {
-			case res := <-cw.results:
-				fn(res)
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
-}
-
-func (cw *ciscoWorker) netDevWorker(ctx context.Context) {
+func (wrk *ciscoWorker) netDevWorker(ctx context.Context, fn func(ctx context.Context, result CiscoResult)) {
 	for {
 		select {
-
 		case <-ctx.Done():
 			return
-
-		case job := <-cw.jobs:
-			ctxTimeout, cancel := context.WithTimeout(context.Background(), time.Duration(job.Timeout)*time.Second)
-			defer cancel()
-
+		case job := <-wrk.jobs:
 			func(ctx context.Context) {
+				ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(job.Timeout)*time.Second)
+				defer cancel()
+				result := CiscoResult{
+					Host: job.CiscoDevice.Hostname,
+				}
+
 				select {
-				case <-ctx.Done():
-					cw.results <- CiscoResult{
-						Host:  job.CiscoDevice.Hostname,
-						Error: errors.New("execution timeout"),
-					}
+				case <-ctxTimeout.Done():
+					result.Error = errors.New("execution timeout")
+					fn(ctx, result)
 					return
 				default:
 					term := ciscoterm.NewTerminal()
 					err := term.Connect(job.CiscoDevice)
 					defer term.Close()
 					if err != nil {
-						cw.results <- CiscoResult{
-							Host:  job.CiscoDevice.Hostname,
-							Error: err,
-						}
+						result.Error = err
+						fn(ctx, result)
 						return
 					}
-					err = term.EnableTerm(job.CiscoDevice.Enable)
+					err = term.EnableTerm(ctxTimeout, job.CiscoDevice.Enable)
 					if err != nil {
-						cw.results <- CiscoResult{
-							Host:  job.CiscoDevice.Hostname,
-							Error: err,
-						}
+						result.Error = err
+						fn(ctx, result)
 						return
 					}
-					err = term.DisablePagination()
+					err = term.DisablePagination(ctxTimeout)
 					if err != nil {
-						cw.results <- CiscoResult{
-							Host:  job.CiscoDevice.Hostname,
-							Error: err,
-						}
+						result.Error = err
+						fn(ctx, result)
 						return
 					}
 
+					resultMap := make(map[string]commandResult)
 					for _, command := range job.Commands {
-						result, err := term.ExecuteCommand(command)
-						if err != nil {
-							cw.results <- CiscoResult{
-								Host:  job.CiscoDevice.Hostname,
-								Error: err,
-							}
-						}
-						cw.results <- CiscoResult{
-							Host:    job.CiscoDevice.Hostname,
-							Command: command,
-							Result:  result,
+						cmdResult, err := term.ExecuteCommand(ctxTimeout, command)
+						resultMap[command] = commandResult{
+							Result: cmdResult,
+							Error:  err,
 						}
 					}
+					result.Result = resultMap
+					fn(ctx, result)
 					return
 				}
-
-			}(ctxTimeout)
+			}(ctx)
 		}
 	}
 }

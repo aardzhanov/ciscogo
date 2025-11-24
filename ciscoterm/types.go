@@ -12,7 +12,7 @@ type CiscoDevice struct {
 	Password     string
 	Enable       string
 	KeyExchanges []string
-	Timeout      int
+	Timeout      int32
 }
 
 type terminal struct {

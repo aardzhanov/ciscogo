@@ -1,6 +1,7 @@
 package ciscoterm
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -90,14 +91,14 @@ func (t *terminal) Close() error {
 	return errors.New("no session")
 }
 
-func (t *terminal) EnableTerm(enablePasswd string) error {
+func (t *terminal) EnableTerm(ctx context.Context, enablePasswd string) error {
 	_, err := t.stdinBuf.Write([]byte("enable\n" + enablePasswd + "\n"))
 	if err != nil {
 		return fmt.Errorf("enable terminal error: %w", err)
 	}
 
 	t.isEnabled = true
-	isFinished, _, err := t.readCommandOutput()
+	isFinished, _, err := t.readCommandOutput(ctx)
 	if err != nil {
 		return fmt.Errorf("enable terminal error: %w", err)
 	}
@@ -107,12 +108,12 @@ func (t *terminal) EnableTerm(enablePasswd string) error {
 	return err
 }
 
-func (t *terminal) DisablePagination() error {
+func (t *terminal) DisablePagination(ctx context.Context) error {
 	_, err := t.stdinBuf.Write([]byte("terminal pager 0\n"))
 	if err != nil {
 		return fmt.Errorf("disable pagination error: %w", err)
 	}
-	isFinished, _, err := t.readCommandOutput()
+	isFinished, _, err := t.readCommandOutput(ctx)
 	if err != nil {
 		return fmt.Errorf("disable pagination error: %w", err)
 	}
@@ -122,13 +123,13 @@ func (t *terminal) DisablePagination() error {
 	return err
 }
 
-func (t *terminal) ExecuteCommand(cmd string) ([]string, error) {
+func (t *terminal) ExecuteCommand(ctx context.Context, cmd string) ([]string, error) {
 	_, err := t.stdinBuf.Write([]byte(cmd + "\n"))
 	if err != nil {
 		return nil, fmt.Errorf("execute command error: %w", err)
 	}
 
-	isFinished, output, err := t.readCommandOutput()
+	isFinished, output, err := t.readCommandOutput(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("execute command error: %w", err)
 	}
@@ -138,7 +139,7 @@ func (t *terminal) ExecuteCommand(cmd string) ([]string, error) {
 	return output, err
 }
 
-func (t *terminal) readCommandOutput() (bool, []string, error) {
+func (t *terminal) readCommandOutput(ctx context.Context) (bool, []string, error) {
 	time.Sleep(time.Millisecond * 100)
 	stdOutBytes := make([]byte, 100000)
 	var byteCount int
@@ -148,28 +149,31 @@ func (t *terminal) readCommandOutput() (bool, []string, error) {
 	var s string
 
 	for {
-		byteCount, err = t.stdoutBuf.Read(stdOutBytes)
-		if err != nil {
-			break
+		select {
+		case <-ctx.Done():
+			return cmdFinished, lines, errors.New("exceeded timeout")
+		default:
+			byteCount, err = t.stdoutBuf.Read(stdOutBytes)
+			if err != nil {
+				return cmdFinished, lines[1:(len(lines) - 1)], err
+			}
+			if byteCount <= 0 {
+				return cmdFinished, lines[1:(len(lines) - 1)], err
+			}
+			s = string(stdOutBytes[:byteCount])
+			lines = append(lines, strings.Split(s, "\r\n")...)
+			if t.isEnabled && strings.TrimSpace(lines[len(lines)-1]) == t.cmdPrompt+"#" {
+				cmdFinished = true
+				return cmdFinished, lines[1:(len(lines) - 1)], err
+			}
+			if !t.isEnabled && strings.TrimSpace(lines[len(lines)-1]) == t.cmdPrompt+">" {
+				cmdFinished = true
+				return cmdFinished, lines[1:(len(lines) - 1)], err
+			}
+			if t.isEnabled && strings.TrimSpace(lines[len(lines)-1]) == "Password:" {
+				cmdFinished = false
+				return cmdFinished, lines[1:(len(lines) - 1)], err
+			}
 		}
-		if byteCount <= 0 {
-			break
-		}
-		s = string(stdOutBytes[:byteCount])
-		lines = append(lines, strings.Split(s, "\r\n")...)
-		if t.isEnabled && strings.TrimSpace(lines[len(lines)-1]) == t.cmdPrompt+"#" {
-			cmdFinished = true
-			break
-		}
-		if !t.isEnabled && strings.TrimSpace(lines[len(lines)-1]) == t.cmdPrompt+">" {
-			cmdFinished = true
-			break
-		}
-		if t.isEnabled && strings.TrimSpace(lines[len(lines)-1]) == "Password:" {
-			cmdFinished = false
-			break
-		}
-
 	}
-	return cmdFinished, lines[1:(len(lines) - 1)], err
 }
