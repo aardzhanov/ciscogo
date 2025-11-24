@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/aardzhanov/awesomeProject3/ciscoterm"
+	"github.com/aardzhanov/ciscogo/ciscoterm"
 )
 
 func (wrk *ciscoWorker) StartWithCallback(ctx context.Context, fn func(ctx context.Context, result CiscoResult)) {

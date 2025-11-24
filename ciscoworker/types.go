@@ -1,6 +1,6 @@
 package ciscoworker
 
-import "github.com/aardzhanov/awesomeProject3/ciscoterm"
+import "github.com/aardzhanov/ciscogo/ciscoterm"
 
 type CiscoJobs struct {
 	ciscoterm.CiscoDevice
