@@ -1,4 +1,4 @@
-module github.com/aardzhanov/awesomeProject3
+module github.com/aardzhanov/ciscogo
 
 go 1.24.0
 
